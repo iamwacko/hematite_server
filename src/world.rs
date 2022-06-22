@@ -78,7 +78,7 @@ impl World {
         // - An id generator, can't use UUID here
         // - Read world info from disk
         // - Read some keypairs from server.properties
-        try!(JoinGame {
+        JoinGame {
             entity_id: 0,
             gamemode: 0b0010,
             dimension: Dimension::Overworld,
@@ -86,7 +86,7 @@ impl World {
             max_players: 20,
             level_type: "default".to_string(),
             reduced_debug_info: false
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< JoinGame");
         // try!(stream.flush());
 
@@ -102,18 +102,18 @@ impl World {
         // try!(stream.flush());
 
         // WRITE `MC|Brand` plugin
-        try!(PluginMessage {
+        PluginMessage {
             channel: "MC|Brand".to_string(),
             data: b"hematite".to_vec()
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< PluginMessage");
         // try!(stream.flush());
 
         // WRITE supported channels
-        try!(PluginMessage {
+        PluginMessage {
             channel: "REGISTER".to_string(),
             data: b"MC|Brand\0".to_vec()
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< PluginMessage");
         // try!(stream.flush());
 
@@ -135,48 +135,48 @@ impl World {
                 });
             }
         }
-        try!(ChunkDataBulk {
+        ChunkDataBulk {
             sky_light_sent: true,
             chunk_meta: meta,
             chunk_data: data,
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< ChunkDataBulk");
         // try!(stream.flush());
 
         // Send Compass
-        try!(WorldSpawn { location: [10, 65, 10] }.write(&mut stream));
+        WorldSpawn { location: [10, 65, 10] }.write(&mut stream)?;
         debug!("<< WorldSpawn");
         // try!(stream.flush());
 
         // Send Time
-        try!(TimeUpdate {
+        TimeUpdate {
             world_age: self.world_age(),
             time_of_day: self.time_of_day()
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< TimeUpdate");
         // try!(stream.flush());
 
         // Send Weather
-        try!(ChangeGameState { reason: 1, value: 0.0 }.write(&mut stream));
+        ChangeGameState { reason: 1, value: 0.0 }.write(&mut stream)?;
         debug!("<< ChangeGameState Weather");
         // try!(stream.flush());
 
         // Send RainDensity
-        try!(ChangeGameState { reason: 8, value: 0.0 }.write(&mut stream));
+        ChangeGameState { reason: 8, value: 0.0 }.write(&mut stream)?;
         debug!("<< ChangeGameState RainDensity");
         // try!(stream.flush());
 
         // Send SkyDarkness
-        try!(ChangeGameState { reason: 9, value: 0.0 }.write(&mut stream));
+        ChangeGameState { reason: 9, value: 0.0 }.write(&mut stream)?;
         debug!("<< ChangeGameState SkyDarkness");
         // try!(stream.flush());
 
         // Send Abilities
-        try!(PlayerAbilities {
+        PlayerAbilities {
             flags: 0b1101, // flying and creative
             flying_speed: 0.05,
             walking_speed: 0.1
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< PlayerAbilities");
         try!(stream.flush());
 
@@ -189,17 +189,17 @@ impl World {
         debug!("<< WindowItems (not sent)");
         // try!(stream.flush());
 
-        try!(PlayerPositionAndLook {
+        PlayerPositionAndLook {
             position: [0.0, 64.0, 0.0],
             yaw: 0.0,
             pitch: 0.0,
             flags: 0x1f
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< PlayerPositionAndLook");
         // try!(stream.flush());
 
         // Read Client Settings
-        match try!(Packet::read(&mut stream)) {
+        match Packet::read(&mut stream)? {
             ClientSettings(cs) => debug!(">> ClientSettings {:?}", cs),
             wrong_packet => panic!("Expecting play::serverbound::ClientSettings packet, got {:?}", wrong_packet)
         }
@@ -210,7 +210,7 @@ impl World {
         // try!(stream.flush());
 
         // Send first Keep Alive
-        try!(KeepAlive { keep_alive_id: rand::random() }.write(&mut stream));
+        KeepAlive { keep_alive_id: rand::random() }.write(&mut stream)?;
         debug!("<< KeepAlive");
         try!(stream.flush());
 

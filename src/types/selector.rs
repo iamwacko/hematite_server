@@ -134,21 +134,21 @@ impl FromStr for EntitySelector {
 
     fn from_str(s: &str) -> Result<EntitySelector, Error> {
         if let Some(captures) = Regex::new(r"^@(.)(\[(.*)\])?$").unwrap().captures(s) {
-            let mut result = match captures.at(1).unwrap() {
+            let mut result = match captures.get(1).unwrap().as_str() {
                 "a" => EntitySelector::all(),
                 "e" => EntitySelector::default(),
                 "p" => EntitySelector::player(),
                 "r" => EntitySelector::random(),
                 sigil => return Err(Error::InvalidSigil(sigil.to_string()))
             };
-            if let Some(args) = captures.at(3) {
+            if let Some(args) = Some(captures.get(3).unwrap().as_str()) {
                 let mut positional_seen = 0u8; // number of positional arguments (x, y, z, r) encountered
                 let mut named_seen = false; // whether a named argument has been encountered
                 for arg in args.split(',') {
                     if let Some(captures) = Regex::new("^(.*)=(.*)$").unwrap().captures(arg) {
                         // named argument
-                        let key = captures.at(1).unwrap();
-                        let value = captures.at(2).unwrap();
+                        let key = captures.get(1).unwrap().as_str();
+                        let value = captures.get(2).unwrap().as_str();
                         match key {
                             "x" => { result.position[0] = Some(try!(i32::from_str(value))); }
                             "y" => { result.position[1] = Some(try!(i32::from_str(value))); }
@@ -171,11 +171,11 @@ impl FromStr for EntitySelector {
                             "type" => { result.entity_type = Attr::from(value) }
                             k => {
                                 if let Some(captures) = Regex::new("score_([A-Za-z]+)").unwrap().captures(k) {
-                                    let objective = captures.at(1).unwrap();
+                                    let objective = captures.get(1).unwrap().as_str();
                                     result.scores.entry(objective.to_string()).or_insert(Range::from(..)).end = Some(try!(i32::from_str(value)));
                                 } else if let Some(captures) = Regex::new("score_([A-Za-z]+)_min").unwrap().captures(k) {
-                                    let objective = captures.at(1).unwrap();
-                                    result.scores.entry(objective.to_string()).or_insert(Range::from(..)).start = Some(try!(i32::from_str(value)));
+                                    let objective = captures.get(1).unwrap();
+                                    result.scores.entry(objective.as_str().to_string()).or_insert(Range::from(..)).start = Some(try!(i32::from_str(value)));
                                 } else {
                                     return Err(Error::InvalidArgName(k.to_string()));
                                 }
