@@ -24,7 +24,7 @@ path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1.0.0"
-flate2 = "0.2"
+flate2 = "1.0.24"
 hematite-nbt = "0.3"
 log = "0.4"
 num = "0.2"
