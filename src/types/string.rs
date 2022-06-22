@@ -27,6 +27,6 @@ impl Protocol for String {
         let len: i32 = <Var<i32> as Protocol>::proto_decode(src)?;
         let mut s = vec![0u8; len as usize];
         src.read_exact(&mut s)?;
-        String::from_utf8(s).map_err(|utf8_err| io::Error::new(io::ErrorKind::InvalidInput, &format!("UTF-8 error: {}", utf8_err.utf8_error().to_string())[..]))
+        String::from_utf8(s).map_err(|utf8_err| io::Error::new(io::ErrorKind::InvalidInput, &format!("UTF-8 error: {}", utf8_err.utf8_error())[..]))
     }
 }

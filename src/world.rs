@@ -16,7 +16,7 @@ use rand;
 use time;
 
 // Temporal, only used within the BLOCK OF SHAME
-const PACKET_NAMES: [&'static str; 26] = [
+const PACKET_NAMES: [&str; 26] = [
     "(c2s) KeepAlive",
     "(c2s) ChatMessage",
     "(c2s) UseEntity",
@@ -123,7 +123,7 @@ impl World {
         let mut data = vec![];
         for z in -1..2 {
             for x in -1..2 {
-                meta.push(ChunkMeta { x: x, z: z, mask: 0b000_0000_0000_1111 });
+                meta.push(ChunkMeta { x, z, mask: 0b000_0000_0000_1111 });
                 data.push(ChunkColumn {
                     chunks: vec![
                         Chunk::new(1 << 4, 0xff),

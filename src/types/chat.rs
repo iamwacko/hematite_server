@@ -146,7 +146,7 @@ impl ChatJson {
                                 if score.keys().any(|k| k != "name" && k != "objective") {
                                     return Err(ChatJsonError::InvalidScore)
                                 }
-                                result.msg = Message::Score { name: name, objective: objective };
+                                result.msg = Message::Score { name, objective };
                             });
                         }
                         "selector" => {
@@ -170,7 +170,7 @@ impl ChatJson {
                         // Handle all of the different format strings.
                         "bold"|"italic"|"underlined"|"strikethrough"|"obfuscated"|"reset"|"random" => {
                             type_check!(&key => value, Boolean(b) {
-                                if b == true {
+                                if b {
                                     result.formats.insert(Format::from_string(&key).unwrap());
                                 }
                             });
@@ -404,13 +404,13 @@ pub enum Format {
 impl Format {
     pub fn to_string(&self) -> String {
         match self {
-            &Format::Bold          => "bold".to_string(),
-            &Format::Italic        => "italic".to_string(),
-            &Format::Underlined    => "underlined".to_string(),
-            &Format::Strikethrough => "strikethrough".to_string(),
-            &Format::Obfuscated    => "obfuscated".to_string(),
-            &Format::Random        => "random".to_string(),
-            &Format::Reset         => "reset".to_string()
+            Format::Bold          => "bold".to_string(),
+            Format::Italic        => "italic".to_string(),
+            Format::Underlined    => "underlined".to_string(),
+            Format::Strikethrough => "strikethrough".to_string(),
+            Format::Obfuscated    => "obfuscated".to_string(),
+            Format::Random        => "random".to_string(),
+            Format::Reset         => "reset".to_string()
         }
     }
 

@@ -1,6 +1,5 @@
 //! MC Protocol UUID data type.
 
-use std::io::ErrorKind::InvalidInput;
 use std::io::prelude::*;
 use std::io;
 use std::str::FromStr;

@@ -283,7 +283,7 @@ impl Protocol for NextState {
     }
 
     fn proto_decode(src: &mut dyn Read) -> io::Result<Self> {
-        match try!(<Var<i32> as Protocol>::proto_decode(src)) {
+        match <Var<i32> as Protocol>::proto_decode(src)? {
             1 => Ok(NextState::Status),
             2 => Ok(NextState::Login),
             _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid state"))
@@ -366,21 +366,21 @@ pub mod play {
                     + this.chunk_data.iter().map(|cd| cd.len()).fold(0, |acc, item| acc + item)
                 }
                 fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
-                    try!(<bool as Protocol>::proto_encode(&this.sky_light_sent, dst));
+                    <bool as Protocol>::proto_encode(&this.sky_light_sent, dst)?;
                     let columns = this.chunk_meta.len() as i32;
-                    try!(<Var<i32> as Protocol>::proto_encode(&columns, dst));
+                    <Var<i32> as Protocol>::proto_encode(&columns, dst)?;
                     for cm in &this.chunk_meta {
-                        try!(<ChunkMeta as Protocol>::proto_encode(cm, dst));
+                        <ChunkMeta as Protocol>::proto_encode(cm, dst)?;
                     }
                     for cd in &this.chunk_data {
-                        let chunk_column = try!(cd.encode());
-                        try!(dst.write_all(&chunk_column));
+                        let chunk_column = cd.encode()?;
+                        dst.write_all(&chunk_column)?;
                     }
                     Ok(())
                 }
                 fn proto_decode(src: &mut dyn Read) -> io::Result<ChunkDataBulk> {
-                    let sky_light_sent = try!(<bool as Protocol>::proto_decode(src));
-                    let columns = try!(<Var<i32> as Protocol>::proto_decode(src));
+                    let sky_light_sent = <bool as Protocol>::proto_decode(src)?;
+                    let columns = <Var<i32> as Protocol>::proto_decode(src)?;
                     let mut chunk_meta = Vec::with_capacity(columns as usize);
                     for cm in &mut chunk_meta {
                         *cm = try!(<ChunkMeta as Protocol>::proto_decode(src));
@@ -395,9 +395,9 @@ pub mod play {
                         *cd = try!(ChunkColumn::decode(&mut src, cm.mask, true, true));
                     }
                     Ok(ChunkDataBulk{
-                        sky_light_sent: sky_light_sent,
-                        chunk_meta: chunk_meta,
-                        chunk_data: chunk_data,
+                        sky_light_sent,
+                        chunk_meta,
+                        chunk_data,
                     })
                 }
             }
@@ -433,14 +433,14 @@ pub mod play {
                     <String as Protocol>::proto_len(&this.channel) + this.data.len()
                 }
                 fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
-                    try!(<String as Protocol>::proto_encode(&this.channel, dst));
-                    try!(dst.write_all(&this.data));
+                    <String as Protocol>::proto_encode(&this.channel, dst)?;
+                    dst.write_all(&this.data)?;
                     Ok(())
                 }
                 fn proto_decode(src: &mut dyn Read) -> io::Result<PluginMessage> {
                     Ok(PluginMessage{
-                        channel: try!(<String as Protocol>::proto_decode(src)),
-                        data:  { let mut data = vec![]; try!(src.read_to_end(&mut data)); data },
+                        channel: <String as Protocol>::proto_decode(src)?,
+                        data:  { let mut data = vec![]; src.read_to_end(&mut data)?; data },
                     })
                 }
             }
@@ -487,14 +487,14 @@ pub mod play {
                     <String as Protocol>::proto_len(&this.channel) + this.data.len()
                 }
                 fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
-                    try!(<String as Protocol>::proto_encode(&this.channel, dst));
-                    try!(dst.write_all(&this.data));
+                    <String as Protocol>::proto_encode(&this.channel, dst)?;
+                    dst.write_all(&this.data)?;
                     Ok(())
                 }
                 fn proto_decode(src: &mut dyn Read) -> io::Result<PluginMessage> {
                     Ok(PluginMessage{
-                        channel: try!(<String as Protocol>::proto_decode(src)),
-                        data: { let mut data = vec![]; try!(src.read_to_end(&mut data)); data },
+                        channel: <String as Protocol>::proto_decode(src)?,
+                        data: { let mut data = vec![]; src.read_to_end(&mut data)?; data },
                     })
                 }
             }

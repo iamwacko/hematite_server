@@ -2,7 +2,7 @@ use std::iter::IntoIterator;
 use std::ops;
 
 pub trait Join<T> {
-    fn join(self, T) -> String;
+    fn join(self, T: T) -> String;
 }
 
 impl<'a, T> Join<&'a str> for T where T: IntoIterator, <T as IntoIterator>::Item: AsRef<str> {

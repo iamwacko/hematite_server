@@ -39,8 +39,8 @@ impl Server {
             props.server_ip.clone()
         };
         Ok(Server {
-            addr: addr,
-            props: props,
+            addr,
+            props,
             // players: vec![],
             worlds: vec![World::new()]
         })
@@ -80,7 +80,7 @@ impl Server {
 
                 // NOTE: threshold of `-1` disables compression
                 let threshold = -1;
-                SetCompression { threshold: threshold }.write(&mut stream)?;
+                SetCompression { threshold }.write(&mut stream)?;
                 debug!("<< LoginSetCompression");
                 // try!(stream.flush());
 

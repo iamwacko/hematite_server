@@ -16,7 +16,7 @@ pub enum Attr<T> {
 
 impl<T: From<String>> From<String> for Attr<T> {
     fn from(s: String) -> Attr<T> {
-        if s.len() == 0 {
+        if s.is_empty() {
             Attr::Unspecified
         } else if &s[..1] == "!" {
             Attr::Not(T::from(s[1..].to_string()))
@@ -28,7 +28,7 @@ impl<T: From<String>> From<String> for Attr<T> {
 
 impl<'a, T: From<String>> From<&'a str> for Attr<T> {
     fn from(s: &str) -> Attr<T> {
-        if s.len() == 0 {
+        if s.is_empty() {
             Attr::Unspecified
         } else if &s[..1] == "!" {
             Attr::Not(T::from(s[1..].to_string()))
@@ -295,7 +295,7 @@ impl<'a> From<&'a EntitySelector> for String {
                 args.push(format!("c={}", sel.count));
             }
         }
-        format!("@{}{}", sigil, if args.len() > 0 { format!("[{}]", args.join(',')) } else { "".to_string() })
+        format!("@{}{}", sigil, if !args.is_empty() { format!("[{}]", args.join(',')) } else { "".to_string() })
     }
 }
 

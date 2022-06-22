@@ -23,9 +23,9 @@ impl Protocol for BlockPos {
     fn proto_len(_: &[i32; 3]) -> usize { 8 }
 
     fn proto_encode(value: &[i32; 3], dst: &mut dyn Write) -> io::Result<()> {
-        let x = value[0].clone();
-        let y = value[1].clone();
-        let z = value[2].clone();
+        let x = value[0];
+        let y = value[1];
+        let z = value[2];
         bounds_check!("x", x, 25);
         bounds_check!("y", y, 11);
         bounds_check!("z", z, 25);
@@ -50,7 +50,7 @@ impl<T: Protocol> Protocol for [T; 3] {
     type Clean = [T::Clean; 3];
 
     fn proto_len(value: &[T::Clean; 3]) -> usize {
-        value.iter().map(|coord| <T as Protocol>::proto_len(coord)).fold(0, |acc, item| acc + item)
+        value.iter().map(|coord| <T as Protocol>::proto_len(coord)).sum()
     }
 
     fn proto_encode(value: &[T::Clean; 3], dst: &mut dyn Write) -> io::Result<()> {

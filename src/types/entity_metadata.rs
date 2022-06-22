@@ -55,11 +55,11 @@ impl Protocol for EntityMetadata {
                 | &Entry::Float3(_) => 12,
             }
         }
-        value.dict.values().map(entry_len).fold(0, |acc, item| acc + item)
+        value.dict.values().map(entry_len).sum()
     }
     fn proto_encode(value: &EntityMetadata, dst: &mut dyn Write) -> io::Result<()> {
         fn key(k: u8, idx: u8) -> u8 {
-            (k << 5 | idx & 0x1f) & 0xff
+            k << 5 | idx & 0x1f
         }
         for (idx, value) in &value.dict {
             match value {
@@ -124,6 +124,6 @@ impl Protocol for EntityMetadata {
             };
             dict.insert(idx, value);
         }
-        Ok(EntityMetadata{ dict: dict })
+        Ok(EntityMetadata{ dict })
     }
 }
