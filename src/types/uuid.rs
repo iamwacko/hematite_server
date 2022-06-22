@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use packet::Protocol;
 
-use uuid::{ParseError, Uuid};
+use uuid::Uuid;
 
 /// UUID read/write wrapper.
 impl Protocol for Uuid {
@@ -21,7 +21,7 @@ impl Protocol for Uuid {
     fn proto_decode(src: &mut dyn Read) -> io::Result<Uuid> {
         let mut v = [0u8; 16];
         src.read_exact(&mut v)?;
-        Uuid::from_bytes(&v).ok_or(io::Error::new(io::ErrorKind::InvalidInput, &format!("Invalid UUID value: {:?} can't be used to create UUID", v)[..]))
+        Ok(Uuid::from_bytes(v))
     }
 }
 
@@ -31,21 +31,16 @@ impl Protocol for UuidString {
     type Clean = Uuid;
 
     fn proto_len(value: &Uuid) -> usize {
-        <String as Protocol>::proto_len(&value.to_hyphenated_string())
+        <String as Protocol>::proto_len(&value.hyphenated().encode_lower(&mut Uuid::encode_buffer()).to_string())
     }
 
     fn proto_encode(value: &Uuid, dst: &mut dyn Write) -> io::Result<()> {
-        <String as Protocol>::proto_encode(&value.to_hyphenated_string(), dst)
+        <String as Protocol>::proto_encode(&value.hyphenated().encode_lower(&mut Uuid::encode_buffer()).to_string(), dst)
     }
 
     fn proto_decode(src: &mut dyn Read) -> io::Result<Uuid> {
         // Unfortunately we can't implement `impl FromError<ParseError> for io::Error`
         let s = <String as Protocol>::proto_decode(src)?;
-        Uuid::from_str(&s).map_err(|err| match err {
-            ParseError::InvalidLength(length) => io::Error::new(InvalidInput, &format!("Invalid length: {}", length)[..]),
-            ParseError::InvalidCharacter(_, _) => io::Error::new(InvalidInput, "invalid character"),
-            ParseError::InvalidGroups(_) => io::Error::new(InvalidInput, "invalid groups"),
-            ParseError::InvalidGroupLength(_, _, _) => io::Error::new(InvalidInput, "invalid group length"),
-        })
+        Ok(Uuid::from_str(&s).unwrap())
     }
 }
