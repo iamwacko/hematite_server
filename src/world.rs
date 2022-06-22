@@ -2,6 +2,7 @@
 //!
 //! This module is a WORK IN PROGRESS.
 
+use std::convert::TryInto;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::thread::sleep;
@@ -46,19 +47,18 @@ const PACKET_NAMES: [&'static str; 26] = [
 
 /// World is a set of dimensions which tick in sync.
 pub struct World {
-    start: time::Timespec
+    start: std::time::Instant
 }
 
 impl World {
     pub fn new() -> World {
-        World { start: time::get_time() }
+        World { start: std::time::Instant::now() }
     }
 
     // FIXME(toqueteos): Read from world's level.dat file
     pub fn world_age(&self) -> i64 {
-        let end = time::get_time();
-        let elapsed = (end - self.start).num_seconds();
-        elapsed * 20
+        let elapsed = self.start.elapsed().as_secs();
+        (elapsed * 20).try_into().unwrap()
     }
 
     // FIXME(toqueteos): Read from world's level.dat file
@@ -215,10 +215,9 @@ impl World {
         stream.flush()?;
 
         // BLOCK OF SHAME
-        let mut t1 = time::get_time();
+        let mut t1 = time::Instant::now();
         loop {
-            let t2 = time::get_time();
-            let t = (t2 - t1).num_seconds();
+            let t = t1.elapsed().whole_seconds();
 
             // Manually skip over incoming packets
             let len = <Var<i32> as Protocol>::proto_decode(&mut stream)?;
@@ -235,7 +234,7 @@ impl World {
                 debug!("<< KeepAlive");
                 stream.flush()?;
 
-                t1 = time::get_time();
+                t1 = time::Instant::now();
             }
 
             sleep(Duration::from_millis(15));

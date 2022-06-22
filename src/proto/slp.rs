@@ -2,6 +2,7 @@
 //!
 //! Reference: http://wiki.vg/Server_List_Ping
 
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::ErrorKind::InvalidInput;
 use std::io::prelude::*;
@@ -146,15 +147,15 @@ pub fn ping(stream: &mut TcpStream) -> io::Result<i64> {
     use packet::status::serverbound::Ping;
 
     // C->S: Ping packet
-    let start = time::get_time();
-    Ping { time: start.sec }.write(stream)?;
+    let start = std::time::SystemTime::now();
+    let start2 = std::time::Instant::now();
+    Ping { time: start.duration_since(std::time::UNIX_EPOCH).expect("Time set before UNIX Epoch").as_secs().try_into().unwrap() }.write(stream)?;
 
     // S->C: Pong packet
     match Packet::read(stream)? {
         Pong(_) => {
-            let end = time::get_time();
-            let elapsed = end.sub(start).num_milliseconds();
-            Ok(elapsed)
+            let elapsed = start2.elapsed().as_secs();
+            Ok(elapsed.try_into().unwrap())
         }
         wrong_packet => Err(io::Error::new(InvalidInput, &format!("Invalid packet read, expecting S->C Pong packet, got {:?}", wrong_packet)[..]))
     }
