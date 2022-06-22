@@ -22,19 +22,19 @@ impl Protocol for BlockPos {
 
     fn proto_len(_: &[i32; 3]) -> usize { 8 }
 
-    fn proto_encode(value: &[i32; 3], dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &[i32; 3], dst: &mut dyn Write) -> io::Result<()> {
         let x = value[0].clone();
         let y = value[1].clone();
         let z = value[2].clone();
         bounds_check!("x", x, 25);
         bounds_check!("y", y, 11);
         bounds_check!("z", z, 25);
-        try!(dst.write_u64::<BigEndian>((x as u64 & 0x3ffffff) << 38 | (y as u64 & 0xfff) << 26 | z as u64 & 0x3ffffff));
+        dst.write_u64::<BigEndian>((x as u64 & 0x3ffffff) << 38 | (y as u64 & 0xfff) << 26 | z as u64 & 0x3ffffff)?;
         Ok(())
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<[i32; 3]> {
-        let block_pos = try!(src.read_u64::<BigEndian>());
+    fn proto_decode(src: &mut dyn Read) -> io::Result<[i32; 3]> {
+        let block_pos = src.read_u64::<BigEndian>()?;
         let x = (block_pos >> 38) as i32;
         let y = (block_pos >> 26 & 0xfff) as i32;
         let z = (block_pos & 0x3ffffff) as i32;
@@ -53,17 +53,17 @@ impl<T: Protocol> Protocol for [T; 3] {
         value.iter().map(|coord| <T as Protocol>::proto_len(coord)).fold(0, |acc, item| acc + item)
     }
 
-    fn proto_encode(value: &[T::Clean; 3], dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &[T::Clean; 3], dst: &mut dyn Write) -> io::Result<()> {
         for coord in value {
-            try!(<T as Protocol>::proto_encode(coord, dst));
+            <T as Protocol>::proto_encode(coord, dst)?;
         }
         Ok(())
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<[T::Clean; 3]> {
-        let x = try!(<T as Protocol>::proto_decode(src));
-        let y = try!(<T as Protocol>::proto_decode(src));
-        let z = try!(<T as Protocol>::proto_decode(src));
+    fn proto_decode(src: &mut dyn Read) -> io::Result<[T::Clean; 3]> {
+        let x = <T as Protocol>::proto_decode(src)?;
+        let y = <T as Protocol>::proto_decode(src)?;
+        let z = <T as Protocol>::proto_decode(src)?;
         Ok([x, y, z])
     }
 }

@@ -93,11 +93,11 @@ impl World {
         // FIXME(toqueteos): Verify `flying_speed` and `walking_speed` values
         // are good, now they are just taken from Glowstone impl.
         // `flags` value is read from server's player list.
-        try!(PlayerAbilities {
+        PlayerAbilities {
             flags: 0b1101, // flying and creative
             flying_speed: 0.05,
             walking_speed: 0.1
-        }.write(&mut stream));
+        }.write(&mut stream)?;
         debug!("<< PlayerAbilities");
         // try!(stream.flush());
 
@@ -178,7 +178,7 @@ impl World {
             walking_speed: 0.1
         }.write(&mut stream)?;
         debug!("<< PlayerAbilities");
-        try!(stream.flush());
+        stream.flush()?;
 
         // // Send Inventory items
         // let wi = ClientWindowItems {
@@ -212,7 +212,7 @@ impl World {
         // Send first Keep Alive
         KeepAlive { keep_alive_id: rand::random() }.write(&mut stream)?;
         debug!("<< KeepAlive");
-        try!(stream.flush());
+        stream.flush()?;
 
         // BLOCK OF SHAME
         let mut t1 = time::get_time();
@@ -221,19 +221,19 @@ impl World {
             let t = (t2 - t1).num_seconds();
 
             // Manually skip over incoming packets
-            let len = try!(<Var<i32> as Protocol>::proto_decode(&mut stream));
-            let id = try!(<Var<i32> as Protocol>::proto_decode(&mut stream));
+            let len = <Var<i32> as Protocol>::proto_decode(&mut stream)?;
+            let id = <Var<i32> as Protocol>::proto_decode(&mut stream)?;
             let n_read = len - 1;
             let mut buf = vec![0u8; n_read as usize];
-            try!(stream.read_exact(&mut buf));
+            stream.read_exact(&mut buf)?;
             // We could add a filter here, chat messages might be info!, position packets are debug!, etc...
             debug!("id={} length={} buf={:?} t2-t={}", PACKET_NAMES[id as usize], len, buf, t);
 
             // Send KeepAlive every 20 seconds, otherwise client times out
             if t > 20 {
-                try!(KeepAlive { keep_alive_id: rand::random() }.write(&mut stream));
+                KeepAlive { keep_alive_id: rand::random() }.write(&mut stream)?;
                 debug!("<< KeepAlive");
-                try!(stream.flush());
+                stream.flush()?;
 
                 t1 = time::get_time();
             }

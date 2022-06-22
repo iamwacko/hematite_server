@@ -12,13 +12,13 @@ macro_rules! parse {
         $value.to_string()
     };
     ($value:ident, bool) => {
-        try!($value.parse().map_err(|_: ParseBoolError| io::Error::new(io::ErrorKind::InvalidInput, "invalid bool value")))
+        $value.parse().map_err(|_: ParseBoolError| io::Error::new(io::ErrorKind::InvalidInput, "invalid bool value"))?
     };
     ($value:ident, i32) => {
-        try!($value.parse().map_err(|_: ParseIntError| io::Error::new(io::ErrorKind::InvalidInput, "invalid i32 value")))
+        $value.parse().map_err(|_: ParseIntError| io::Error::new(io::ErrorKind::InvalidInput, "invalid i32 value"))?
     };
     ($value:ident, u16) => {
-        try!($value.parse().map_err(|_: ParseIntError| io::Error::new(io::ErrorKind::InvalidInput, "invalid u16 value")))
+        $value.parse().map_err(|_: ParseIntError| io::Error::new(io::ErrorKind::InvalidInput, "invalid u16 value"))?
     }
 }
 
@@ -42,7 +42,7 @@ macro_rules! server_properties_impl {
             /// Load and parse a server.properties file from `path`,
             pub fn load(path: &Path) -> io::Result<Properties> {
                 let mut p = Properties::default();
-                let file = try!(File::open(path));
+                let file = File::open(path)?;
                 let file = BufReader::new(file);
                 for line in file.lines().map(|l| l.unwrap()) {
                     // Ignore comment lines
@@ -62,16 +62,16 @@ macro_rules! server_properties_impl {
             /// Saves a server.properties file into `path`. It creates the
             /// file if it does not exist, and will truncate it if it does.
             pub fn save(&self, path: &Path) -> io::Result<()> {
-                let file = try!(File::create(path));
+                let file = File::create(path)?;
                 let mut file = BufWriter::new(file);
                 // Header
-                try!(write!(&mut file, "#Minecraft server properties"));
-                try!(write!(&mut file, "#(File modification datestamp)"));
+                write!(&mut file, "#Minecraft server properties")?;
+                write!(&mut file, "#(File modification datestamp)")?;
                 // Body. Vanilla MC does write 37 out of 40 properties by default, it
                 // only writes the 3 left if they are not using default values. It
                 // also writes them unsorted (possibly because they are stored in a
                 // HashMap).
-                $(try!(write!(&mut file, "{}={}\n", $hyphen, self.$field));)*
+                $(write!(&mut file, "{}={}\n", $hyphen, self.$field)?;)*
                 Ok(())
             }
         }

@@ -12,19 +12,19 @@ pub trait Protocol {
     type Clean;
 
     fn proto_len(value: &Self::Clean) -> usize;
-    fn proto_encode(value: &Self::Clean, dst: &mut Write) -> io::Result<()>;
-    fn proto_decode(src: &mut Read) -> io::Result<Self::Clean>;
+    fn proto_encode(value: &Self::Clean, dst: &mut dyn Write) -> io::Result<()>;
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Self::Clean>;
 }
 
 /// A trait for encoding the body of a single packet type.
 pub trait PacketWrite {
     fn inner_len(&self) -> usize;
-    fn inner_encode(&self, dst: &mut Write) -> io::Result<()>;
+    fn inner_encode(&self, dst: &mut dyn Write) -> io::Result<()>;
 
     /// Writes a full packet to a writer, including length.
     ///
     /// **TODO:** add support for compression.
-    fn write(&self, dst: &mut Write) -> io::Result<()> {
+    fn write(&self, dst: &mut dyn Write) -> io::Result<()> {
         let len = self.inner_len();
         try!(<Var<i32> as Protocol>::proto_encode(&(len as i32), dst));
         self.inner_encode(dst)
@@ -33,7 +33,7 @@ pub trait PacketWrite {
 
 /// A trait for decoding any of the packet types in one ID namespace.
 pub trait PacketRead: Sized {
-    fn inner_decode(src: &mut Read) -> io::Result<Self>;
+    fn inner_decode(src: &mut dyn Read) -> io::Result<Self>;
 
     /// Reads a new packet from a reader, including length.
     ///
@@ -82,8 +82,8 @@ macro_rules! packets {
         }
 
         impl PacketRead for Packet {
-            fn inner_decode(src: &mut Read) -> io::Result<Self> {
-                match try!(<Var<i32> as Protocol>::proto_decode(src)) {
+            fn inner_decode(src: &mut dyn Read) -> io::Result<Self> {
+                match <Var<i32> as Protocol>::proto_decode(src)? {
                     $($id => <$name as Protocol>::proto_decode(src).map(Packet::$name),)*
                     _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "unknown packet id"))
                 }
@@ -96,8 +96,8 @@ macro_rules! packets {
                 id_len + <Self as Protocol>::proto_len(self)
             }
 
-            fn inner_encode(&self, dst: &mut Write) -> io::Result<()> {
-                try!(<Var<i32> as Protocol>::proto_encode(&$id, dst));
+            fn inner_encode(&self, dst: &mut dyn Write) -> io::Result<()> {
+                <Var<i32> as Protocol>::proto_encode(&$id, dst)?;
                 <Self as Protocol>::proto_encode(self, dst)
             }
         })*
@@ -111,12 +111,12 @@ macro_rules! impl_protocol {
 
             fn proto_len(_: &$name) -> usize { 1 }
 
-            fn proto_encode(value: &$name, dst: &mut Write) -> io::Result<()> {
+            fn proto_encode(value: &$name, dst: &mut dyn Write) -> io::Result<()> {
                 try!(dst.$enc_name(*value));
                 Ok(())
             }
 
-            fn proto_decode(src: &mut Read) -> io::Result<$name> {
+            fn proto_decode(src: &mut dyn Read) -> io::Result<$name> {
                 src.$dec_name().map_err(|err| io::Error::from(err))
             }
         }
@@ -127,12 +127,12 @@ macro_rules! impl_protocol {
 
             fn proto_len(_: &$name) -> usize { $len }
 
-            fn proto_encode(value: &$name, dst: &mut Write) -> io::Result<()> {
+            fn proto_encode(value: &$name, dst: &mut dyn Write) -> io::Result<()> {
                 try!(dst.$enc_name::<BigEndian>(*value));
                 Ok(())
             }
 
-            fn proto_decode(src: &mut Read) -> io::Result<$name> {
+            fn proto_decode(src: &mut dyn Read) -> io::Result<$name> {
                 src.$dec_name::<BigEndian>().map_err(|err| io::Error::from(err))
             }
         }
@@ -154,14 +154,14 @@ macro_rules! proto_struct {
                 0 $(+ <$fty as Protocol>::proto_len(&value.$fname))*
             }
 
-            fn proto_encode(value: &$name, dst: &mut Write) -> io::Result<()> {
-                $(try!(<$fty as Protocol>::proto_encode(&value.$fname, dst));)*
+            fn proto_encode(value: &$name, dst: &mut dyn Write) -> io::Result<()> {
+                $(<$fty as Protocol>::proto_encode(&value.$fname, dst)?;)*
                 Ok(())
             }
 
-            fn proto_decode(src: &mut Read) -> io::Result<$name> {
+            fn proto_decode(src: &mut dyn Read) -> io::Result<$name> {
                 Ok($name {
-                    $($fname: try!(<$fty as Protocol>::proto_decode(src))),*
+                    $($fname: <$fty as Protocol>::proto_decode(src)?),*
                 })
             }
         }
@@ -176,11 +176,11 @@ macro_rules! proto_struct {
 
             fn proto_len(_: &Self) -> usize { 0 }
 
-            fn proto_encode(_: &Self, _: &mut Write) -> io::Result<()> {
+            fn proto_encode(_: &Self, _: &mut dyn Write) -> io::Result<()> {
                 Ok(())
             }
 
-            fn proto_decode(_: &mut Read) -> io::Result<$name> {
+            fn proto_decode(_: &mut dyn Read) -> io::Result<$name> {
                 Ok($name)
             }
         }
@@ -218,12 +218,12 @@ impl Protocol for bool {
 
     fn proto_len(_: &bool) -> usize { 1 }
 
-    fn proto_encode(value: &bool, dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &bool, dst: &mut dyn Write) -> io::Result<()> {
         try!(dst.write_u8(if *value { 1 } else { 0 }));
         Ok(())
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<bool> {
+    fn proto_decode(src: &mut dyn Read) -> io::Result<bool> {
         let value = try!(src.read_u8());
         if value > 1 {
             Err(io::Error::new(io::ErrorKind::InvalidInput, &format!("Invalid bool value, expecting 0 or 1, got {}", value)[..]))
@@ -244,7 +244,7 @@ impl<T: Protocol> Protocol for Option<T> {
         }
     }
 
-    fn proto_encode(value: &Option<T::Clean>, dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &Option<T::Clean>, dst: &mut dyn Write) -> io::Result<()> {
         match *value {
             Some(ref inner) => {
                 try!(<bool as Protocol>::proto_encode(&true, dst));
@@ -257,7 +257,7 @@ impl<T: Protocol> Protocol for Option<T> {
         Ok(())
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<Option<T::Clean>> {
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Option<T::Clean>> {
         if try!(<bool as Protocol>::proto_decode(src)) {
             Ok(Some(try!(<T as Protocol>::proto_decode(src))))
         } else {
@@ -274,7 +274,7 @@ impl Protocol for NextState {
 
     fn proto_len(_: &Self) -> usize { 1 }
 
-    fn proto_encode(value: &Self, dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &Self, dst: &mut dyn Write) -> io::Result<()> {
         let i = match *value {
             NextState::Status => 1,
             NextState::Login => 2
@@ -282,7 +282,7 @@ impl Protocol for NextState {
         <Var<i32> as Protocol>::proto_encode(&i, dst)
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<Self> {
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Self> {
         match try!(<Var<i32> as Protocol>::proto_decode(src)) {
             1 => Ok(NextState::Status),
             2 => Ok(NextState::Login),
@@ -365,7 +365,7 @@ pub mod play {
                     + this.chunk_meta.iter().map(<ChunkMeta as Protocol>::proto_len).fold(0, |acc, item| acc + item)
                     + this.chunk_data.iter().map(|cd| cd.len()).fold(0, |acc, item| acc + item)
                 }
-                fn proto_encode(this: &Self, dst: &mut Write) -> io::Result<()> {
+                fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
                     try!(<bool as Protocol>::proto_encode(&this.sky_light_sent, dst));
                     let columns = this.chunk_meta.len() as i32;
                     try!(<Var<i32> as Protocol>::proto_encode(&columns, dst));
@@ -378,7 +378,7 @@ pub mod play {
                     }
                     Ok(())
                 }
-                fn proto_decode(src: &mut Read) -> io::Result<ChunkDataBulk> {
+                fn proto_decode(src: &mut dyn Read) -> io::Result<ChunkDataBulk> {
                     let sky_light_sent = try!(<bool as Protocol>::proto_decode(src));
                     let columns = try!(<Var<i32> as Protocol>::proto_decode(src));
                     let mut chunk_meta = Vec::with_capacity(columns as usize);
@@ -432,12 +432,12 @@ pub mod play {
                 fn proto_len(this: &Self) -> usize {
                     <String as Protocol>::proto_len(&this.channel) + this.data.len()
                 }
-                fn proto_encode(this: &Self, dst: &mut Write) -> io::Result<()> {
+                fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
                     try!(<String as Protocol>::proto_encode(&this.channel, dst));
                     try!(dst.write_all(&this.data));
                     Ok(())
                 }
-                fn proto_decode(src: &mut Read) -> io::Result<PluginMessage> {
+                fn proto_decode(src: &mut dyn Read) -> io::Result<PluginMessage> {
                     Ok(PluginMessage{
                         channel: try!(<String as Protocol>::proto_decode(src)),
                         data:  { let mut data = vec![]; try!(src.read_to_end(&mut data)); data },
@@ -486,12 +486,12 @@ pub mod play {
                 fn proto_len(this: &Self) -> usize {
                     <String as Protocol>::proto_len(&this.channel) + this.data.len()
                 }
-                fn proto_encode(this: &Self, dst: &mut Write) -> io::Result<()> {
+                fn proto_encode(this: &Self, dst: &mut dyn Write) -> io::Result<()> {
                     try!(<String as Protocol>::proto_encode(&this.channel, dst));
                     try!(dst.write_all(&this.data));
                     Ok(())
                 }
-                fn proto_decode(src: &mut Read) -> io::Result<PluginMessage> {
+                fn proto_decode(src: &mut dyn Read) -> io::Result<PluginMessage> {
                     Ok(PluginMessage{
                         channel: try!(<String as Protocol>::proto_decode(src)),
                         data: { let mut data = vec![]; try!(src.read_to_end(&mut data)); data },

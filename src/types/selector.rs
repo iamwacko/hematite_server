@@ -150,32 +150,32 @@ impl FromStr for EntitySelector {
                         let key = captures.get(1).unwrap().as_str();
                         let value = captures.get(2).unwrap().as_str();
                         match key {
-                            "x" => { result.position[0] = Some(try!(i32::from_str(value))); }
-                            "y" => { result.position[1] = Some(try!(i32::from_str(value))); }
-                            "z" => { result.position[2] = Some(try!(i32::from_str(value))); }
-                            "dx" => { result.delta_pos[0] = Some(try!(i32::from_str(value))); }
-                            "dy" => { result.delta_pos[1] = Some(try!(i32::from_str(value))); }
-                            "dz" => { result.delta_pos[2] = Some(try!(i32::from_str(value))); }
-                            "r" => { result.radius.end = Some(try!(i32::from_str(value))); }
-                            "rm" => { result.radius.start = Some(try!(i32::from_str(value))); }
-                            "m" => { result.gamemode = Some(try!(u8::from_str(value))); }
-                            "c" => { result.count = try!(i32::from_str(value)); }
-                            "l" => { result.xp_level.end = Some(try!(i32::from_str(value))); }
-                            "lm" => { result.xp_level.start = Some(try!(i32::from_str(value))); }
+                            "x" => { result.position[0] = Some(i32::from_str(value)?); }
+                            "y" => { result.position[1] = Some(i32::from_str(value)?); }
+                            "z" => { result.position[2] = Some(i32::from_str(value)?); }
+                            "dx" => { result.delta_pos[0] = Some(i32::from_str(value)?); }
+                            "dy" => { result.delta_pos[1] = Some(i32::from_str(value)?); }
+                            "dz" => { result.delta_pos[2] = Some(i32::from_str(value)?); }
+                            "r" => { result.radius.end = Some(i32::from_str(value)?); }
+                            "rm" => { result.radius.start = Some(i32::from_str(value)?); }
+                            "m" => { result.gamemode = Some(u8::from_str(value)?); }
+                            "c" => { result.count = i32::from_str(value)?; }
+                            "l" => { result.xp_level.end = Some(i32::from_str(value)?); }
+                            "lm" => { result.xp_level.start = Some(i32::from_str(value)?); }
                             "team" => { result.team = Attr::from(value) }
                             "name" => { result.name = Attr::from(value) }
-                            "rx" => { result.pitch.end = Some(try!(f32::from_str(value))); }
-                            "rxm" => { result.pitch.start = Some(try!(f32::from_str(value))); }
-                            "ry" => { result.yaw.end = Some(try!(f32::from_str(value))); }
-                            "rym" => { result.yaw.start = Some(try!(f32::from_str(value))); }
+                            "rx" => { result.pitch.end = Some(f32::from_str(value)?); }
+                            "rxm" => { result.pitch.start = Some(f32::from_str(value)?); }
+                            "ry" => { result.yaw.end = Some(f32::from_str(value)?); }
+                            "rym" => { result.yaw.start = Some(f32::from_str(value)?); }
                             "type" => { result.entity_type = Attr::from(value) }
                             k => {
                                 if let Some(captures) = Regex::new("score_([A-Za-z]+)").unwrap().captures(k) {
                                     let objective = captures.get(1).unwrap().as_str();
-                                    result.scores.entry(objective.to_string()).or_insert(Range::from(..)).end = Some(try!(i32::from_str(value)));
+                                    result.scores.entry(objective.to_string()).or_insert(Range::from(..)).end = Some(i32::from_str(value)?);
                                 } else if let Some(captures) = Regex::new("score_([A-Za-z]+)_min").unwrap().captures(k) {
                                     let objective = captures.get(1).unwrap();
-                                    result.scores.entry(objective.as_str().to_string()).or_insert(Range::from(..)).start = Some(try!(i32::from_str(value)));
+                                    result.scores.entry(objective.as_str().to_string()).or_insert(Range::from(..)).start = Some(i32::from_str(value)?);
                                 } else {
                                     return Err(Error::InvalidArgName(k.to_string()));
                                 }
@@ -191,10 +191,10 @@ impl FromStr for EntitySelector {
                             // empty, keep default
                         } else {
                             match positional_seen {
-                                0 => { result.position[0] = Some(try!(i32::from_str(arg))); }
-                                1 => { result.position[1] = Some(try!(i32::from_str(arg))); }
-                                2 => { result.position[2] = Some(try!(i32::from_str(arg))); }
-                                3 => { result.radius = Range::from(..try!(i32::from_str(arg))); }
+                                0 => { result.position[0] = Some(i32::from_str(arg)?); }
+                                1 => { result.position[1] = Some(i32::from_str(arg)?); }
+                                2 => { result.position[2] = Some(i32::from_str(arg)?); }
+                                3 => { result.radius = Range::from(..i32::from_str(arg)?); }
                                 _ => return Err(Error::TooManyPositionalArgs)
                             }
                         }

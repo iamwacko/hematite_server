@@ -96,8 +96,8 @@ macro_rules! type_check {
 }
 
 impl ChatJson {
-    pub fn from_reader(src: &mut io::Read) -> Result<ChatJson, ChatJsonError> {
-        let json = try!(Json::from_reader(src));
+    pub fn from_reader(src: &mut dyn io::Read) -> Result<ChatJson, ChatJsonError> {
+        let json = Json::from_reader(src)?;
         ChatJson::from_json(json)
     }
 
@@ -151,7 +151,7 @@ impl ChatJson {
                         }
                         "selector" => {
                             type_check!(&key => value, String(sel) {
-                                result.msg = Message::Selector(try!(EntitySelector::from_str(&sel)));
+                                result.msg = Message::Selector(EntitySelector::from_str(&sel)?);
                             });
                         }
                         "insertion" => {

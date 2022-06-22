@@ -27,25 +27,25 @@ impl ChunkColumn {
         let mut dst: Cursor<Vec<u8>> = Cursor::new(Vec::new());
         for chunk in &self.chunks {
             for x in chunk.blocks.iter() {
-                try!(dst.write_u16::<LittleEndian>(*x));
+                dst.write_u16::<LittleEndian>(*x)?;
             }
         }
         for chunk in &self.chunks {
-            try!(dst.write_all(&chunk.block_light));
+            dst.write_all(&chunk.block_light)?;
         }
         for chunk in &self.chunks {
             match chunk.sky_light {
-                Some(xs) => try!(dst.write_all(&xs)),
+                Some(xs) => dst.write_all(&xs)?,
                 None => {}
             }
         }
         match self.biomes {
-            Some(xs) => try!(dst.write_all(&xs)),
+            Some(xs) => dst.write_all(&xs)?,
             None => {}
         }
         Ok(dst.into_inner())
     }
-    pub fn decode(src: &mut Read, mask: u16, continuous: bool, sky_light: bool) -> io::Result<ChunkColumn> {
+    pub fn decode(src: &mut dyn Read, mask: u16, continuous: bool, sky_light: bool) -> io::Result<ChunkColumn> {
         let num_chunks = mask.count_ones();
         let mut chunks = Vec::new();
         // NOTE: vec![Chunk::empty(); num_chunks as usize] won't work
@@ -58,13 +58,13 @@ impl ChunkColumn {
         };
         for chunk in &mut column.chunks {
             for x in chunk.blocks.iter_mut() {
-                *x = try!(<u16 as Protocol>::proto_decode(src));
+                *x = <u16 as Protocol>::proto_decode(src)?;
             }
         }
         for chunk in &mut column.chunks {
             // We use this instead of read_exactly because it's an array, Vec is useless here.
             for x in chunk.block_light.iter_mut() {
-                *x = try!(<u8 as Protocol>::proto_decode(src));
+                *x = <u8 as Protocol>::proto_decode(src)?;
             }
         }
         for chunk in &mut column.chunks {
@@ -75,14 +75,14 @@ impl ChunkColumn {
                 // We use this instead of read_exactly because it's an array, Vec is useless here.
                 let mut sl = [0u8; 2048];
                 for x in sl.iter_mut() {
-                    *x = try!(<u8 as Protocol>::proto_decode(src));
+                    *x = <u8 as Protocol>::proto_decode(src)?;
                 }
                 chunk.sky_light = Some(sl);
             }
         }
         if continuous {
             let mut biomes = [0u8; 256];
-            try!(src.read_exact(&mut biomes));
+            src.read_exact(&mut biomes)?;
             column.biomes = Some(biomes)
         }
         Ok(column)

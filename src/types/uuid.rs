@@ -14,13 +14,13 @@ impl Protocol for Uuid {
     type Clean = Uuid;
 
     fn proto_len(_: &Uuid) -> usize { 16 }
-    fn proto_encode(value: &Uuid, dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &Uuid, dst: &mut dyn Write) -> io::Result<()> {
         dst.write_all(value.as_bytes())
     }
     /// Reads 16 bytes from `src` and returns a `Uuid`
-    fn proto_decode(src: &mut Read) -> io::Result<Uuid> {
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Uuid> {
         let mut v = [0u8; 16];
-        try!(src.read_exact(&mut v));
+        src.read_exact(&mut v)?;
         Uuid::from_bytes(&v).ok_or(io::Error::new(io::ErrorKind::InvalidInput, &format!("Invalid UUID value: {:?} can't be used to create UUID", v)[..]))
     }
 }
@@ -34,13 +34,13 @@ impl Protocol for UuidString {
         <String as Protocol>::proto_len(&value.to_hyphenated_string())
     }
 
-    fn proto_encode(value: &Uuid, dst: &mut Write) -> io::Result<()> {
+    fn proto_encode(value: &Uuid, dst: &mut dyn Write) -> io::Result<()> {
         <String as Protocol>::proto_encode(&value.to_hyphenated_string(), dst)
     }
 
-    fn proto_decode(src: &mut Read) -> io::Result<Uuid> {
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Uuid> {
         // Unfortunately we can't implement `impl FromError<ParseError> for io::Error`
-        let s = try!(<String as Protocol>::proto_decode(src));
+        let s = <String as Protocol>::proto_decode(src)?;
         Uuid::from_str(&s).map_err(|err| match err {
             ParseError::InvalidLength(length) => io::Error::new(InvalidInput, &format!("Invalid length: {}", length)[..]),
             ParseError::InvalidCharacter(_, _) => io::Error::new(InvalidInput, "invalid character"),

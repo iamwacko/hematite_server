@@ -16,14 +16,14 @@ macro_rules! enum_protocol_impl {
 
             fn proto_len(value: &$name) -> usize { <$repr as Protocol>::proto_len(&(*value as $repr)) }
 
-            fn proto_encode(value: &$name, dst: &mut Write) -> io::Result<()> {
+            fn proto_encode(value: &$name, dst: &mut dyn Write) -> io::Result<()> {
                 let repr = *value as $repr;
-                try!(<$repr as Protocol>::proto_encode(&repr, dst));
+                <$repr as Protocol>::proto_encode(&repr, dst)?;
                 Ok(())
             }
 
-            fn proto_decode(src: &mut Read) -> io::Result<$name> {
-                let value = try!(<$repr as Protocol>::proto_decode(src));
+            fn proto_decode(src: &mut dyn Read) -> io::Result<$name> {
+                let value = <$repr as Protocol>::proto_decode(src)?;
                 match FromPrimitive::$dec_repr(value) {
                     Some(x) => Ok(x),
                     None => Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid enum"))

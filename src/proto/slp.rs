@@ -57,12 +57,12 @@ impl Protocol for Response {
     fn proto_len(value: &Response) -> usize {
         <String as Protocol>::proto_len(&json::encode(&value).unwrap())
     }
-    fn proto_encode(value: &Response, dst: &mut Write) -> io::Result<()> {
-        try!(<String as Protocol>::proto_encode(&json::encode(&value).unwrap(), dst));
+    fn proto_encode(value: &Response, dst: &mut dyn Write) -> io::Result<()> {
+        <String as Protocol>::proto_encode(&json::encode(&value).unwrap(), dst)?;
         Ok(())
     }
-    fn proto_decode(src: &mut Read) -> io::Result<Response> {
-        let s = try!(<String as Protocol>::proto_decode(src));
+    fn proto_decode(src: &mut dyn Read) -> io::Result<Response> {
+        let s = <String as Protocol>::proto_decode(src)?;
         println!("Response proto_decode {}", s);
         json::decode(&s).map_err(|_| io::Error::new(InvalidInput, "found invalid JSON"))
     }
@@ -77,12 +77,12 @@ pub fn response(stream: &mut TcpStream) -> io::Result<()> {
     use packet::status::clientbound::StatusResponse;
 
     // C->S: Status Request packet
-    match try!(Packet::read(stream)) {
+    match Packet::read(stream)? {
         StatusRequest(_) => {
             // S->C: Status Response packet
-            let mut file = try!(File::open(&Path::new("assets/favicon.png")));
+            let mut file = File::open(&Path::new("assets/favicon.png"))?;
             let mut contents = Vec::new();
-            try!(file.read_to_end(&mut contents));
+            file.read_to_end(&mut contents)?;
             let favicon = contents.to_base64(STANDARD);
             // FIXME(toqueteos): Micro-optimization? We could totally drop JSON
             // encoding and just replace player values (online & max) with format! all
@@ -102,7 +102,7 @@ pub fn response(stream: &mut TcpStream) -> io::Result<()> {
                 description: "With custom favicons! Woot :D".to_string(),
                 favicon: Some(format!("data:image/png;base64,{:}", favicon)),
             };
-            try!(StatusResponse { response: resp }.write(stream));
+            StatusResponse { response: resp }.write(stream)?;
             Ok(())
         }
         wrong_packet => Err(io::Error::new(InvalidInput, &format!("Invalid packet read, expecting C->S StatusRequest packet, got {:?}", wrong_packet)[..]))
@@ -115,10 +115,10 @@ pub fn pong(stream: &mut TcpStream) -> io::Result<()> {
     use packet::status::serverbound::Packet::{self, Ping};
 
     // C->S: Ping packet
-    match try!(Packet::read(stream)) {
+    match Packet::read(stream)? {
         Ping(ping) => {
             // S->C: Pong packet
-            try!(Pong { time: ping.time }.write(stream));
+            Pong { time: ping.time }.write(stream)?;
             Ok(())
         }
         wrong_packet => Err(io::Error::new(InvalidInput, &format!("Invalid packet read, expecting C->S Ping packet, got {:?}", wrong_packet)[..]))
@@ -131,10 +131,10 @@ pub fn request(stream: &mut TcpStream) -> io::Result<Response> {
     use packet::status::clientbound::Packet::{self, StatusResponse};
 
     // C->S: Status Request packet
-    try!(StatusRequest.write(stream));
+    StatusRequest.write(stream)?;
 
     // S->C: Status Response packet
-    match try!(Packet::read(stream)) {
+    match Packet::read(stream)? {
         StatusResponse(resp) => Ok(resp.response),
         wrong_packet => Err(io::Error::new(InvalidInput, &format!("Invalid packet read, expecting S->C StatusResponse packet, got {:?}", wrong_packet)[..]))
     }
@@ -147,10 +147,10 @@ pub fn ping(stream: &mut TcpStream) -> io::Result<i64> {
 
     // C->S: Ping packet
     let start = time::get_time();
-    try!(Ping { time: start.sec }.write(stream));
+    Ping { time: start.sec }.write(stream)?;
 
     // S->C: Pong packet
-    match try!(Packet::read(stream)) {
+    match Packet::read(stream)? {
         Pong(_) => {
             let end = time::get_time();
             let elapsed = end.sub(start).num_milliseconds();
